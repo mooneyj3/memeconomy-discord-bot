@@ -5,7 +5,12 @@ client = discord.Client()
 
 meme_machine_channel_id = 583874774674046976
 
+# reference for fetching channel history: https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.history
+
 def top_meme (args = None):
+
+    # channel = client.get_channel(meme_machine_channel_id)
+    # messages = await ctx.channel.history(limit=200).flatten()
     return "[PLACEHOLDER]: top-meme command received"
 
 def leader (args = None):
