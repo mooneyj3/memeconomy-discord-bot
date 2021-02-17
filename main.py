@@ -1,12 +1,22 @@
 import discord
 import os
+import json
 
 client = discord.Client()
 
 meme_machine_channel_id = 583874774674046976
+bot_testing_channel_id = 584125656150048769
+
+memeconomy_currency = ":xzibit:"
+
+bank = {}
 
 # reference for fetching channel history: https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.history
 # TODO: create method to fetch channel history for last 30 days.
+# TODO: create a backup method to dump to JSON and restore from JSON
+
+# listen to all messages and listen to all reactions
+# keep track of top memes
 
 def top_meme (args = None):
 
@@ -15,7 +25,7 @@ def top_meme (args = None):
     return "[PLACEHOLDER]: top-meme command received"
 
 def leader (args = None):
-    return "[PLACEHOLDER]: leader command received"
+    return json.dumps(bank)
 
 dispatcher = {'top-meme': top_meme, 'leader': leader}
 
@@ -55,6 +65,34 @@ async def on_message(message):
         reply_message = command_processor(message.content)
 
         await message.channel.send(reply_message)
+
+
+# Reaction Object: https://discordpy.readthedocs.io/en/latest/api.html#discord.Reaction 
+# User Object: https://discordpy.readthedocs.io/en/latest/api.html#discord.User
+# channel = client.get_channel(bot_testing_channel_id)
+# await channel.send("`" + str(payload.emoji) + "`")
+
+def update_bank(user_id, transaction):
+    if user_id not in bank.keys():
+        bank[user_id] = 0
+    bank[user_id] = bank[user_id] + transaction    
+    return
+
+
+
+@client.event
+async def on_raw_reaction_add(payload):
+    if memeconomy_currency in str(payload.emoji):
+        update_bank(payload.user_id, 1)
+    return
+
+
+@client.event
+async def on_raw_reaction_remove(payload):
+    if memeconomy_currency in str(payload.emoji):
+        update_bank(payload.user_id, -1)
+    return
+
 
 
 client.run(os.getenv('DISCORD_TOKEN'))
