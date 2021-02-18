@@ -1,18 +1,16 @@
 """
-This i
+memeconomy is a discord bot that tracks reactions across a discord challen.
 """
 import discord
 import os
 import json
 
+bot_testing_channel_id = 584125656150048769
+memeconomy_currency = ':xzibit:'
+bank = {}
+
 client = discord.Client()
 
-meme_machine_channel_id = 583874774674046976
-bot_testing_channel_id = 584125656150048769
-
-memeconomy_currency = ":xzibit:"
-
-bank = {}
 
 # reference for fetching channel history: https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.history
 # TODO: create method to fetch channel history for last 30 days.
@@ -75,7 +73,11 @@ async def on_message(message):
 # channel = client.get_channel(bot_testing_channel_id)
 # await channel.send("`" + str(payload.emoji) + "`")
 
+
 def update_bank(user_id, transaction):
+	"""
+	Updates the memecurrency bank
+	"""
     if user_id not in bank.keys():
         bank[user_id] = 0
     bank[user_id] = bank[user_id] + transaction    
@@ -85,6 +87,9 @@ def update_bank(user_id, transaction):
 
 @client.event
 async def on_raw_reaction_add(payload):
+	"""
+	Add Reaction event listener
+	"""
     if memeconomy_currency in str(payload.emoji):
         update_bank(payload.user_id, 1)
     return
@@ -92,6 +97,9 @@ async def on_raw_reaction_add(payload):
 
 @client.event
 async def on_raw_reaction_remove(payload):
+	"""
+	Remove Reaction event listener
+	"""
     if memeconomy_currency in str(payload.emoji):
         update_bank(payload.user_id, -1)
     return
