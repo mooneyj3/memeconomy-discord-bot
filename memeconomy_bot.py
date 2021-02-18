@@ -74,25 +74,53 @@ async def on_message(message):
 # await channel.send("`" + str(payload.emoji) + "`")
 
 
-def update_bank(user_id, transaction):
+async def update_bank(payload):
 	"""
 	Updates the memecurrency bank
 	"""
-    if user_id not in bank.keys():
-        bank[user_id] = 0
-    bank[user_id] = bank[user_id] + transaction    
-    return
+	# Get the event type
+	event_reference = {'REACTION_ADD': 1, 'REACTION_REMOVE': -1}
+	transaction = event_reference[payload.event_type]
 
+	# Get the username of person who reacted
+	reactor = await client.fetch_user(payload.user_id)
+	reactor_name = reactor.name # gets the display name
+
+	# Get the username of the author
+	channel = client.get_channel(payload.channel_id)
+	partial_message = channel.get_partial_message(payload.message_id)
+	message = await partial_message.fetch()
+	author_name = message.author.name
+
+	# Return if reactor and author are the same
+	if reactor_name == author_name: 
+		return
+	
+	# update the bank for the reactor
+	if reactor_name not in bank.keys():
+		bank[reactor_name] = {'received': 0, 'sent': 0}
+	bank[reactor_name]['sent'] += transaction
+
+	# update the bank for the author
+	if author_name not in bank.keys():
+		bank[author_name] = {'received': 0, 'sent': 0}
+	bank[author_name]['received'] += transaction
+
+	return
 
 
 @client.event
 async def on_raw_reaction_add(payload):
 	"""
 	Add Reaction event listener
+	This will take the payload
+
+	message_id will be used to attribute the reaction to the original poster
 	"""
-    if memeconomy_currency in str(payload.emoji):
-        update_bank(payload.user_id, 1)
-    return
+	if memeconomy_currency in str(payload.emoji):
+		await update_bank(payload)
+	print(bank)
+	return
 
 
 @client.event
@@ -100,9 +128,10 @@ async def on_raw_reaction_remove(payload):
 	"""
 	Remove Reaction event listener
 	"""
-    if memeconomy_currency in str(payload.emoji):
-        update_bank(payload.user_id, -1)
-    return
+	if memeconomy_currency in str(payload.emoji):
+		await update_bank(payload)
+	print(bank)
+	return
 
 
 
