@@ -7,15 +7,27 @@ import json
 from prettytable import PrettyTable
 
 bot_testing_channel_id = 584125656150048769
-memeconomy_currency = ':xzibit:'
-bank = {}
+memeconomy_currency = ':xzibit:'     # custom emoji
+memeconomy_emoji_id = '686709720090017821' # emoji id
+memeconomy_emoji_str = '<' + memeconomy_currency + memeconomy_emoji_id + '>'
+bank_file = 'bank.txt'
+
+# load bank
+if os.path.exists(bank_file):
+    with open(bank_file) as json_file:
+        bank = json.load(json_file)
+else:
+    bank = {}
 
 client = discord.Client()
 
-
 # reference for fetching channel history: https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.history
-# TODO: create method to fetch channel history for last 30 days.
-# TODO: create a backup method to dump to JSON and restore from JSON
+# TODO: use timestamp to store a dictionary entry for 'last_update_date'
+# TODO: setup restore functionality based on 'last_update_date' that iterates through channels and populates missed currency to the bank
+# TODO: incorporate bank for top memes
+# TODO: add default sort and sort options to leaderboard
+# TODO: add nth reaction celebration --- i.e., post a celebration when someone's bank hit's 100
+# TODO: hidden emoji response -- listens for middle finger and flips person off back
 
 # listen to all messages and listen to all reactions
 # keep track of top memes
@@ -28,14 +40,14 @@ def top_meme (args = None):
 
 
 def leader (args = None):
-"""
-Creates a leaderboard from bank and converts it to a string
-"""
+    """
+    Creates a leaderboard from bank and converts it to a string
+    """
     pretty_table = PrettyTable()
     pretty_table.field_names = ["Member", memeconomy_currency + " received", memeconomy_currency + " sent"]
     for user in bank.keys():
         pretty_table.add_row([user, bank[user]['received'], bank[user]['sent']])
-    return "Bank of " + memeconomy_currency + " account balances \n" + "```" + pretty_table.get_string() + "```"
+    return "Bank of " + memeconomy_emoji_str + " account balances \n" + "```" + pretty_table.get_string() + "```"
 
 dispatcher = {'top-meme': top_meme, 'leader': leader}
 
@@ -84,63 +96,64 @@ async def on_message(message):
 
 
 async def update_bank(payload):
-	"""
-	Updates the memecurrency bank
-	"""
-	# Get the event type
-	event_reference = {'REACTION_ADD': 1, 'REACTION_REMOVE': -1}
-	transaction = event_reference[payload.event_type]
+    """
+    Updates the memecurrency bank
+    """
+    # Get the event type
+    event_reference = {'REACTION_ADD': 1, 'REACTION_REMOVE': -1}
+    transaction = event_reference[payload.event_type]
 
-	# Get the username of person who reacted
-	reactor = await client.fetch_user(payload.user_id)
-	reactor_name = reactor.name # gets the display name
+    # Get the username of person who reacted
+    reactor = await client.fetch_user(payload.user_id)
+    reactor_name = reactor.name # gets the display name
 
-	# Get the username of the author
-	channel = client.get_channel(payload.channel_id)
-	partial_message = channel.get_partial_message(payload.message_id)
-	message = await partial_message.fetch()
-	author_name = message.author.name
+    # Get the username of the author
+    channel = client.get_channel(payload.channel_id)
+    partial_message = channel.get_partial_message(payload.message_id)
+    message = await partial_message.fetch()
+    author_name = message.author.name
 
-	# Return if reactor and author are the same
-	if reactor_name == author_name: 
-		return
-	
-	# update the bank for the reactor
-	if reactor_name not in bank.keys():
-		bank[reactor_name] = {'received': 0, 'sent': 0}
-	bank[reactor_name]['sent'] += transaction
+    # Return if reactor and author are the same
+    if reactor_name == author_name: 
+        return
+    
+    # update the bank for the reactor
+    if reactor_name not in bank.keys():
+        bank[reactor_name] = {'received': 0, 'sent': 0}
+    bank[reactor_name]['sent'] += transaction
 
-	# update the bank for the author
-	if author_name not in bank.keys():
-		bank[author_name] = {'received': 0, 'sent': 0}
-	bank[author_name]['received'] += transaction
-
-	return
+    # update the bank for the author
+    if author_name not in bank.keys():
+        bank[author_name] = {'received': 0, 'sent': 0}
+    bank[author_name]['received'] += transaction
+    
+    with open(bank_file, 'w') as outfile:
+        json.dump(bank, outfile)
+    
+    return
 
 
 @client.event
 async def on_raw_reaction_add(payload):
-	"""
-	Add Reaction event listener
-	This will take the payload
+    """
+    Add Reaction event listener
+    This will take the payload
 
-	message_id will be used to attribute the reaction to the original poster
-	"""
-	if memeconomy_currency in str(payload.emoji):
-		await update_bank(payload)
-	print(bank)
-	return
+    message_id will be used to attribute the reaction to the original poster
+    """
+    if memeconomy_currency in str(payload.emoji):
+        await update_bank(payload)
+    return
 
 
 @client.event
 async def on_raw_reaction_remove(payload):
-	"""
-	Remove Reaction event listener
-	"""
-	if memeconomy_currency in str(payload.emoji):
-		await update_bank(payload)
-	print(bank)
-	return
+    """
+    Remove Reaction event listener
+    """
+    if memeconomy_currency in str(payload.emoji):
+        await update_bank(payload)
+    return
 
 
 
