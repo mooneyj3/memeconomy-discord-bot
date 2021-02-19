@@ -4,6 +4,7 @@ memeconomy is a discord bot that tracks reactions across a discord challen.
 import discord
 import os
 import json
+from prettytable import PrettyTable
 
 bot_testing_channel_id = 584125656150048769
 memeconomy_currency = ':xzibit:'
@@ -25,8 +26,16 @@ def top_meme (args = None):
     # messages = await ctx.channel.history(limit=200).flatten()
     return "[PLACEHOLDER]: top-meme command received"
 
+
 def leader (args = None):
-    return json.dumps(bank)
+"""
+Creates a leaderboard from bank and converts it to a string
+"""
+    pretty_table = PrettyTable()
+    pretty_table.field_names = ["Member", memeconomy_currency + " received", memeconomy_currency + " sent"]
+    for user in bank.keys():
+        pretty_table.add_row([user, bank[user]['received'], bank[user]['sent']])
+    return "Bank of " + memeconomy_currency + " account balances \n" + "```" + pretty_table.get_string() + "```"
 
 dispatcher = {'top-meme': top_meme, 'leader': leader}
 
