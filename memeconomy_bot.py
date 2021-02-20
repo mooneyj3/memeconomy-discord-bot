@@ -4,7 +4,7 @@ memeconomy is a discord bot that tracks reactions across a discord challen.
 import discord
 import os
 import json
-from prettytable import PrettyTable
+import time
 
 bot_testing_channel_id = 584125656150048769
 memeconomy_currency = ':xzibit:'     # custom emoji
@@ -16,16 +16,19 @@ bank_file = 'bank.txt'
 if os.path.exists(bank_file):
     with open(bank_file) as json_file:
         bank = json.load(json_file)
+        last_update_date = bank['timestamp']
+        bank = bank['bank']
 else:
+    last_update_date = 0
     bank = {}
+
 
 client = discord.Client()
 
 # reference for fetching channel history: https://discordpy.readthedocs.io/en/latest/api.html#discord.TextChannel.history
-# TODO: use timestamp to store a dictionary entry for 'last_update_date'
-# TODO: setup restore functionality based on 'last_update_date' that iterates through channels and populates missed currency to the bank
+# TODO: setup restore functionality based on 'last_update_date' that iterates through channels and populates missed currency to the bank, this should ignore bot channels
 # TODO: incorporate bank for top memes
-# TODO: add default sort and sort options to leaderboard
+# TODO: add sort by options (sent / received) to leader
 # TODO: add nth reaction celebration --- i.e., post a celebration when someone's bank hit's 100
 # TODO: hidden emoji response -- listens for middle finger and flips person off back
 
@@ -43,21 +46,30 @@ def leader (args = None):
     """
     Creates a leaderboard from bank and converts it to a string
     """
-    pretty_table = PrettyTable()
-    pretty_table.field_names = ["Member", memeconomy_currency + " received", memeconomy_currency + " sent"]
-    for user in bank.keys():
-        pretty_table.add_row([user, bank[user]['received'], bank[user]['sent']])
-    return "Bank of " + memeconomy_emoji_str + " account balances \n" + "```" + pretty_table.get_string() + "```"
+    output_str = "Bank of " + memeconomy_emoji_str + " account balances \n" + "```"
+    bank_sorted = sorted(bank.items(), key = lambda x: x[1]['received'], reverse=True)
 
+    output_str += 'user'.ljust(16) + 'recd'.rjust(5) + 'sent'.rjust(5) + '\n'
+
+    for user in bank_sorted:
+        row = user[0].ljust(16) + str(user[1]['received']).rjust(5) + str(user[1]['sent']).rjust(5) + '\n'
+        output_str += row
+    
+    output_str += "```"
+
+    return output_str
+
+
+# function dispatcher
 dispatcher = {'top-meme': top_meme, 'leader': leader}
 
 
 # Interprets the command received 
-def command_processor(content):
+def memeconomy_command_processor(content):
     command_args = content.split(" ")
     
     if len(command_args) == 1:
-        return "[PLACEHOLDER] No args"
+        return "[PLACEHOLDER] No args, insert help menu here"
 
     command = command_args[1]
 
@@ -84,7 +96,7 @@ async def on_message(message):
 
     # Handle commands
     if message.content.startswith('$memeconomy'):
-        reply_message = command_processor(message.content)
+        reply_message = memeconomy_command_processor(message.content)
 
         await message.channel.send(reply_message)
 
@@ -128,7 +140,7 @@ async def update_bank(payload):
     bank[author_name]['received'] += transaction
     
     with open(bank_file, 'w') as outfile:
-        json.dump(bank, outfile)
+        json.dump({'timestamp' : time.time(), 'bank' : bank}, outfile)
     
     return
 
